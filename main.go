@@ -41,13 +41,12 @@ func (f *flake) Update() {
 	}
 }
 
-func newFlake(g *game.Game, char rune) *flake {
-	x := rand.Intn(g.MaxWidth)
+func newFlake(g *game.Game, x int, char rune) *flake {
 	y := rand.Intn(5)
 	colorOffset := int32(rand.Intn(50))
 	so := g.Style.Foreground(
 		tcell.NewRGBColor(255-colorOffset, 255-colorOffset, 255-colorOffset))
-	speed := rand.Intn(5)
+	speed := rand.Intn(3)
 	hpOffset := rand.Intn(5)
 	return &flake{
 		GameObject: game.GameObject{
@@ -155,8 +154,10 @@ func _main(lines []string) (err error) {
 		if chance < 50 {
 			rline := []rune(lines[lineIX])
 
+			x := 0
 			for ix := 0; ix < len(rline); ix++ {
-				gg.AddDrawable(newFlake(gg, rline[ix]))
+				x += rand.Intn(gg.MaxWidth / len(rline))
+				gg.AddDrawable(newFlake(gg, x, rline[ix]))
 			}
 
 			lineIX++
