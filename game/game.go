@@ -76,6 +76,16 @@ func (g *Game) FindGameObject(fn func(Drawable) bool) Drawable {
 	return nil
 }
 
+func (g *Game) IsThingAt(x, y int) bool {
+	for _, gobj := range g.drawables {
+		p := gobj.Pos()
+		if p.X == x && p.Y == y {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *Game) FilterGameObjects(fn func(Drawable) bool) []Drawable {
 	out := []Drawable{}
 	for _, gobj := range g.drawables {
@@ -89,6 +99,8 @@ func (g *Game) FilterGameObjects(fn func(Drawable) bool) []Drawable {
 type Drawable interface {
 	Draw()
 	Update()
+	Pos() Point
+	Transform(int, int)
 }
 
 type GameObject struct {
@@ -108,7 +120,7 @@ func (g *GameObject) Transform(x, y int) {
 	g.Y += y
 }
 
-func (g *GameObject) Point() Point {
+func (g *GameObject) Pos() Point {
 	return Point{g.X, g.Y}
 }
 

@@ -31,7 +31,11 @@ func (f *flake) Update() {
 		return
 	}
 	ground := f.Game.MaxHeight - 1
-	f.Y += f.speed
+	next := f.Y + f.speed
+	for f.Game.IsThingAt(f.X, next) && next > f.Y {
+		next--
+	}
+	f.Y = next
 	if f.Y > ground {
 		f.Y = ground
 	}
@@ -48,7 +52,7 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 	so := g.Style.Foreground(
 		tcell.NewRGBColor(255-colorOffset, 255-colorOffset, 255-colorOffset))
 	speed := rand.Intn(3) + 1
-	hpOffset := rand.Intn(5)
+	hpOffset := rand.Intn(25)
 	return &flake{
 		GameObject: game.GameObject{
 			Game:          g,
@@ -60,7 +64,7 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 			StyleOverride: &so,
 		},
 		speed: speed,
-		HP:    10 + hpOffset,
+		HP:    100 + hpOffset,
 	}
 }
 
@@ -100,6 +104,8 @@ func newWind(g *game.Game) *wind {
 }
 
 func _main(lines []string) (err error) {
+	// TODO wind mechanic
+	// TODO gust mechanic
 	s, err := tcell.NewScreen()
 	if err != nil {
 		return err
