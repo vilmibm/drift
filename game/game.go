@@ -90,6 +90,7 @@ type Drawable interface {
 	Draw()
 	Update()
 	Pos() Point
+	Size() Point
 	Transform(int, int)
 }
 
@@ -114,6 +115,10 @@ func (g *GameObject) Transform(x, y int) {
 
 func (g *GameObject) Pos() Point {
 	return Point{g.X, g.Y}
+}
+
+func (g *GameObject) Size() Point {
+	return Point{g.W, g.H}
 }
 
 func (g *GameObject) Draw() {

@@ -33,8 +33,7 @@ func (f *flake) Update() {
 	ground := f.Game.MaxHeight - 1
 	next := f.Y + f.speed
 	flakeFilter := func(d game.Drawable) bool {
-		_, ok := d.(*flake)
-		if !ok {
+		if _, ok := d.(*flake); !ok {
 			return false
 		}
 		p := d.Pos()
@@ -47,6 +46,25 @@ func (f *flake) Update() {
 	f.Y = next
 	if f.Y > ground {
 		f.Y = ground
+	}
+
+	windFilter := func(d game.Drawable) bool {
+		if _, ok := d.(*wind); !ok {
+			return false
+		}
+		p := d.Pos()
+		s := d.Size()
+		if f.Y != p.Y {
+			return false
+		}
+
+		return f.X <= p.X && f.X > p.X-s.X
+	}
+
+	winds := f.Game.FilterGameObjects(windFilter)
+	if len(winds) > 0 {
+		w := winds[0]
+		f.X += w.(*wind).Speed
 	}
 
 	if f.Y == ground {
@@ -87,18 +105,18 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 type wind struct {
 	game.GameObject
 	direction int
-	speed     int
+	Speed     int
 }
 
 func (s *wind) Update() {
-	s.X = s.X + (s.direction * s.speed)
+	s.X = s.X + (s.direction * s.Speed)
 }
 
 func newWind(g *game.Game) *wind {
 	x := 0
-	y := rand.Intn(g.MaxHeight - 5)
-	width := rand.Intn(10) + 1
-	speed := rand.Intn(5) + 3
+	y := rand.Intn(g.MaxHeight - 4)
+	width := rand.Intn(20) + 1
+	speed := rand.Intn(10) + 3
 	dir := 1 // TODO can spawn and go other way
 
 	return &wind{
@@ -110,7 +128,7 @@ func newWind(g *game.Game) *wind {
 			Invisible: true,
 		},
 		direction: dir,
-		speed:     speed,
+		Speed:     speed,
 	}
 }
 
@@ -152,7 +170,9 @@ func _main(lines []string) (err error) {
 	rand.Seed(time.Now().Unix())
 
 	dogust := func() {
-		// TODO generate a bunch of wind
+		for y := 0; y < gg.MaxHeight; y++ {
+			gg.AddDrawable(newWind(gg))
+		}
 	}
 
 	var lineIX int
