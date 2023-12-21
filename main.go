@@ -177,6 +177,7 @@ func _main(lines []string) (err error) {
 
 	var lineIX int
 	var quitting bool
+	starting := true
 	for {
 		select {
 		case <-quit:
@@ -191,12 +192,19 @@ func _main(lines []string) (err error) {
 		}
 
 		chance := rand.Intn(100)
-		if chance < 10 {
+		if chance < 10 || starting {
 			rline := []rune(lines[lineIX])
 
 			x := 0
 			for ix := 0; ix < len(rline); ix++ {
-				x += rand.Intn(gg.MaxWidth/len(rline)) + 1
+				gap := rand.Intn(gg.MaxWidth/len(rline)) + 1
+				if ix == 0 {
+					gap = rand.Intn(2)
+				}
+				if gap > 5 {
+					gap -= 5
+				}
+				x += gap
 				gg.AddDrawable(newFlake(gg, x, rline[ix]))
 			}
 
@@ -206,9 +214,12 @@ func _main(lines []string) (err error) {
 			}
 		}
 
+		starting = false
+
 		windChance := rand.Intn(100)
-		if windChance < 20 {
-			gg.AddDrawable(newWind(gg))
+		if windChance < 5 {
+			//gg.AddDrawable(newWind(gg))
+			dogust()
 		}
 
 		s.Clear()
