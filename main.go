@@ -21,37 +21,52 @@ const (
 type flake struct {
 	game.GameObject
 	speed int
-	HP    int
+	hp    int
+	color int32
 }
 
 func (f *flake) Update() {
-	if f.HP <= 0 {
-		// TODO could make some water
+	if f.hp <= 0 {
 		f.Game.Destroy(f)
 		return
 	}
 	ground := f.Game.MaxHeight - 1
 	next := f.Y + f.speed
-	for f.Game.IsThingAt(f.X, next) && next > f.Y {
+	flakeFilter := func(d game.Drawable) bool {
+		_, ok := d.(*flake)
+		if !ok {
+			return false
+		}
+		p := d.Pos()
+		return p.Y == next && p.X == f.X
+	}
+	for len(f.Game.FilterGameObjects(flakeFilter)) > 0 && next > f.Y {
 		next--
 	}
+
 	f.Y = next
 	if f.Y > ground {
 		f.Y = ground
 	}
 
 	if f.Y == ground {
-		f.HP--
-		// TODO drain color
+		f.hp--
+		f.color -= 5
+		if f.color < 0 {
+			f.color = 0
+		}
+		so := f.Game.Style.Foreground(tcell.NewRGBColor(f.color, f.color, f.color))
+		f.StyleOverride = &so
 	}
 }
 
 func newFlake(g *game.Game, x int, char rune) *flake {
 	y := rand.Intn(5)
-	colorOffset := int32(rand.Intn(200))
+	color := 255 - int32(rand.Intn(100))
 	so := g.Style.Foreground(
-		tcell.NewRGBColor(255-colorOffset, 255-colorOffset, 255-colorOffset))
-	speed := rand.Intn(3) + 1
+		tcell.NewRGBColor(color, color, color))
+	//speed := rand.Intn(3) + 1
+	speed := 1
 	hpOffset := rand.Intn(25)
 	return &flake{
 		GameObject: game.GameObject{
@@ -63,8 +78,9 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 			Sprite:        string(char),
 			StyleOverride: &so,
 		},
+		color: color,
 		speed: speed,
-		HP:    100 + hpOffset,
+		hp:    100 + hpOffset,
 	}
 }
 
@@ -80,23 +96,18 @@ func (s *wind) Update() {
 
 func newWind(g *game.Game) *wind {
 	x := 0
-	y := 5     // TODO randomize
-	width := 5 // TODO randomize
-	speed := 5 // TODO randomize
-	dir := 1   // TODO randomize
-
-	spr := ""
-	for w := 0; w < width; w++ {
-		spr += " "
-	}
+	y := rand.Intn(g.MaxHeight - 5)
+	width := rand.Intn(10) + 1
+	speed := rand.Intn(5) + 3
+	dir := 1 // TODO can spawn and go other way
 
 	return &wind{
 		GameObject: game.GameObject{
 			X: x, Y: y,
-			W:      width,
-			H:      1,
-			Sprite: spr,
-			Game:   g,
+			W:         width,
+			H:         1,
+			Game:      g,
+			Invisible: true,
 		},
 		direction: dir,
 		speed:     speed,
@@ -104,6 +115,8 @@ func newWind(g *game.Game) *wind {
 }
 
 func _main(lines []string) (err error) {
+	// IDEA z plane; only snow in foreground piles up; gives sense of depth (did
+	// 			it by accident with the color offset thing)
 	// TODO wind mechanic
 	// TODO gust mechanic
 	s, err := tcell.NewScreen()
@@ -173,7 +186,10 @@ func _main(lines []string) (err error) {
 			}
 		}
 
-		// TODO wind generation
+		windChance := rand.Intn(100)
+		if windChance < 20 {
+			gg.AddDrawable(newWind(gg))
+		}
 
 		s.Clear()
 		gg.Update()

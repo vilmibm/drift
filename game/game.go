@@ -76,16 +76,6 @@ func (g *Game) FindGameObject(fn func(Drawable) bool) Drawable {
 	return nil
 }
 
-func (g *Game) IsThingAt(x, y int) bool {
-	for _, gobj := range g.drawables {
-		p := gobj.Pos()
-		if p.X == x && p.Y == y {
-			return true
-		}
-	}
-	return false
-}
-
 func (g *Game) FilterGameObjects(fn func(Drawable) bool) []Drawable {
 	out := []Drawable{}
 	for _, gobj := range g.drawables {
@@ -111,6 +101,8 @@ type GameObject struct {
 	Sprite        string
 	Game          *Game
 	StyleOverride *tcell.Style
+	// TODO and thus, Drawable becomes a misnomer
+	Invisible bool
 }
 
 func (g *GameObject) Update() {}
@@ -125,6 +117,9 @@ func (g *GameObject) Pos() Point {
 }
 
 func (g *GameObject) Draw() {
+	if g.Invisible {
+		return
+	}
 	var style *tcell.Style
 	if g.StyleOverride != nil {
 		style = g.StyleOverride
