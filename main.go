@@ -30,12 +30,13 @@ func (f *flake) Update() {
 		f.Game.Destroy(f)
 		return
 	}
+	ground := f.Game.MaxHeight - 1
 	f.Y += f.speed
-	if f.Y > f.Game.MaxHeight {
-		f.Y = f.Game.MaxHeight
+	if f.Y > ground {
+		f.Y = ground
 	}
 
-	if f.Y == f.Game.MaxHeight {
+	if f.Y == ground {
 		f.HP--
 		// TODO drain color
 	}
@@ -46,7 +47,7 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 	colorOffset := int32(rand.Intn(50))
 	so := g.Style.Foreground(
 		tcell.NewRGBColor(255-colorOffset, 255-colorOffset, 255-colorOffset))
-	speed := rand.Intn(3)
+	speed := rand.Intn(3) + 1
 	hpOffset := rand.Intn(5)
 	return &flake{
 		GameObject: game.GameObject{
@@ -151,12 +152,12 @@ func _main(lines []string) (err error) {
 		}
 
 		chance := rand.Intn(100)
-		if chance < 50 {
+		if chance < 10 {
 			rline := []rune(lines[lineIX])
 
 			x := 0
 			for ix := 0; ix < len(rline); ix++ {
-				x += rand.Intn(gg.MaxWidth / len(rline))
+				x += rand.Intn(gg.MaxWidth/len(rline)) + 1
 				gg.AddDrawable(newFlake(gg, x, rline[ix]))
 			}
 
