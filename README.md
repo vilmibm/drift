@@ -2,9 +2,9 @@
 
 _being a piece of textmode visual art for contemplating the dead months_
 
-everything will be lost
-like fragile flakes
-on a winter wind
+everything will be lost<br>
+like fragile flakes<br>
+on a winter wind<br>
 
 ![the above lines drifting down a terminal as snowflakes](./drift.gif)
 
