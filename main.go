@@ -44,7 +44,7 @@ func (f *flake) Update() {
 
 func newFlake(g *game.Game, x int, char rune) *flake {
 	y := rand.Intn(5)
-	colorOffset := int32(rand.Intn(50))
+	colorOffset := int32(rand.Intn(200))
 	so := g.Style.Foreground(
 		tcell.NewRGBColor(255-colorOffset, 255-colorOffset, 255-colorOffset))
 	speed := rand.Intn(3) + 1
