@@ -70,8 +70,8 @@ func (f *flake) Update() {
 	if f.Y == ground {
 		f.hp--
 		f.color -= 5
-		if f.color < 0 {
-			f.color = 0
+		if f.color < 25 {
+			f.color = 25
 		}
 		so := f.Game.Style.Foreground(tcell.NewRGBColor(f.color, f.color, f.color))
 		f.StyleOverride = &so
