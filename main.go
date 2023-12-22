@@ -18,6 +18,57 @@ const (
 	animInterval = time.Millisecond * 300
 )
 
+type farFlake struct {
+	game.GameObject
+	speed int
+	color int32
+}
+
+func newFarFlake(g *game.Game, x int, char rune) *farFlake {
+	color := int32(rand.Intn(50) + 1)
+	speed := rand.Intn(3) + 1
+	return &farFlake{
+		GameObject: game.GameObject{
+			Game:   g,
+			X:      x,
+			Y:      0,
+			W:      1,
+			H:      1,
+			Sprite: string(char),
+			Layer:  -1,
+		},
+		speed: speed,
+		color: color,
+	}
+}
+
+// TODO farFlakes works. but they can be drawn in front of flakes. I want to experiment with a layer system for game objects that affects draw order.
+
+func (ff *farFlake) Update() {
+	ff.color += int32(rand.Intn(20) - 10) // -10 to 10
+	so := ff.Game.Style.Foreground(tcell.NewRGBColor(ff.color, ff.color, ff.color))
+	ff.StyleOverride = &so
+	windFilter := func(d game.Drawable) bool {
+		if _, ok := d.(*wind); !ok {
+			return false
+		}
+		p := d.Pos()
+		s := d.Size()
+		if ff.Y != p.Y {
+			return false
+		}
+
+		return ff.X <= p.X && ff.X > p.X-s.X
+	}
+	winds := ff.Game.FilterGameObjects(windFilter)
+	if len(winds) > 0 {
+		w := winds[0]
+		ff.X += w.(*wind).Speed
+	}
+
+	ff.Y += ff.speed
+}
+
 type flake struct {
 	game.GameObject
 	speed int
@@ -206,6 +257,7 @@ func _main(lines []string) (err error) {
 				}
 				x += gap
 				gg.AddDrawable(newFlake(gg, x, rline[ix]))
+				gg.AddDrawable(newFarFlake(gg, x-2, rline[ix]))
 			}
 
 			lineIX++

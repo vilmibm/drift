@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -62,11 +63,26 @@ func (g *Game) Update() {
 }
 
 func (g *Game) Draw() {
-	for _, gobj := range g.drawables {
-		gobj.Draw()
+	byLayer := map[int][]Drawable{}
+	layers := []int{}
+	// TODO layer implementation
+	for _, d := range g.drawables {
+		if _, ok := byLayer[d.GetLayer()]; !ok {
+			layers = append(layers, d.GetLayer())
+			byLayer[d.GetLayer()] = []Drawable{}
+		}
+		byLayer[d.GetLayer()] = append(byLayer[d.GetLayer()], d)
+
+	}
+	sort.Ints(layers)
+	for _, l := range layers {
+		for _, d := range byLayer[l] {
+			d.Draw()
+		}
 	}
 }
 
+// TODO add a FindGameObject that is layer scoped
 func (g *Game) FindGameObject(fn func(Drawable) bool) Drawable {
 	for _, gobj := range g.drawables {
 		if fn(gobj) {
@@ -92,6 +108,7 @@ type Drawable interface {
 	Pos() Point
 	Size() Point
 	Transform(int, int)
+	GetLayer() int
 }
 
 type GameObject struct {
@@ -104,6 +121,7 @@ type GameObject struct {
 	StyleOverride *tcell.Style
 	// TODO and thus, Drawable becomes a misnomer
 	Invisible bool
+	Layer     int
 }
 
 func (g *GameObject) Update() {}
@@ -119,6 +137,10 @@ func (g *GameObject) Pos() Point {
 
 func (g *GameObject) Size() Point {
 	return Point{g.W, g.H}
+}
+
+func (g *GameObject) GetLayer() int {
+	return g.Layer
 }
 
 func (g *GameObject) Draw() {
