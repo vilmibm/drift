@@ -28,13 +28,15 @@ type farFlake struct {
 }
 
 func newFarFlake(g *game.Game, x int, char rune) *farFlake {
-	color := int32(rand.Intn(30) + 1)
-	speed := rand.Intn(2) + 1
+	color := int32(rand.Intn(15) + 1)
+	//speed := rand.Intn(2) + 1
+	speed := 1
+	y := 0 - rand.Intn(10)
 	return &farFlake{
 		GameObject: game.GameObject{
 			Game:   g,
 			X:      x,
-			Y:      0,
+			Y:      y,
 			W:      1,
 			H:      1,
 			Sprite: string(char),
@@ -49,23 +51,23 @@ func (ff *farFlake) Update() {
 	ff.color += int32(rand.Intn(20) - 10) // -10 to 10
 	so := ff.Game.Style.Foreground(tcell.NewRGBColor(ff.color, ff.color, ff.color))
 	ff.StyleOverride = &so
-	windFilter := func(d game.Drawable) bool {
-		if _, ok := d.(*wind); !ok {
-			return false
-		}
-		p := d.Pos()
-		s := d.Size()
-		if ff.Y != p.Y {
-			return false
-		}
+	//windFilter := func(d game.Drawable) bool {
+	//	if _, ok := d.(*wind); !ok {
+	//		return false
+	//	}
+	//	p := d.Pos()
+	//	s := d.Size()
+	//	if ff.Y != p.Y {
+	//		return false
+	//	}
 
-		return ff.X <= p.X && ff.X > p.X-s.X
-	}
-	winds := ff.Game.FilterGameObjectsByLayer(windLayer, windFilter)
-	if len(winds) > 0 {
-		w := winds[0]
-		ff.X += w.(*wind).Speed
-	}
+	//	return ff.X <= p.X && ff.X > p.X-s.X
+	//}
+	//winds := ff.Game.FilterGameObjectsByLayer(windLayer, windFilter)
+	//if len(winds) > 0 {
+	//	w := winds[0]
+	//	ff.X += w.(*wind).Speed
+	//}
 
 	ff.Y += ff.speed
 }
@@ -135,13 +137,13 @@ func (f *flake) Update() {
 	}
 
 	if oldY != f.Y && !blown {
-		// TODO f.X += f.swing
+		// TODO i didn't end up liking this f.X += f.swing
 		f.swing = -1 * f.swing
 	}
 }
 
 func newFlake(g *game.Game, x int, char rune) *flake {
-	y := rand.Intn(2)
+	y := 0 - rand.Intn(4)
 	color := 255 - int32(rand.Intn(100))
 	so := g.Style.Foreground(
 		tcell.NewRGBColor(color, color, color))
@@ -237,7 +239,8 @@ func _main(lines []string) (err error) {
 
 	var lineIX int
 	var quitting bool
-	starting := true
+	//starting := true
+	ticks := 0
 	for {
 		select {
 		case <-quit:
@@ -251,13 +254,15 @@ func _main(lines []string) (err error) {
 			break
 		}
 
-		chance := rand.Intn(100)
-		if chance < 10 || starting {
+		if ticks == 999 {
+			ticks = 0
+		}
+		if ticks%15 == 0 {
 			rline := []rune(lines[lineIX])
 
 			x := rand.Intn(5)
 			for ix := 0; ix < len(rline); ix++ {
-				gap := rand.Intn(gg.MaxWidth/len(rline)) + 1
+				gap := rand.Intn(gg.MaxWidth/len(rline)) + 4
 				if ix == 0 {
 					gap = rand.Intn(2)
 				}
@@ -268,11 +273,8 @@ func _main(lines []string) (err error) {
 				x += gap
 				gg.AddDrawable(newFlake(gg, x, rline[ix]))
 				offset := rand.Intn(4) + 1
-				if rand.Intn(10) > 5 {
-					offset = -1 * offset
-
-				}
 				gg.AddDrawable(newFarFlake(gg, x+offset, rline[ix]))
+				gg.AddDrawable(newFarFlake(gg, x-offset, rline[ix]))
 			}
 
 			lineIX++
@@ -280,8 +282,9 @@ func _main(lines []string) (err error) {
 				lineIX = 0
 			}
 		}
+		ticks++
 
-		starting = false
+		//starting = false
 
 		windChance := rand.Intn(100)
 		if windChance < 5 {
@@ -293,6 +296,7 @@ func _main(lines []string) (err error) {
 		gg.Update()
 		gg.Draw()
 		s.Show()
+		//time.Sleep(time.Second / 4)
 	}
 
 	return nil

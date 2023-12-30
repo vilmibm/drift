@@ -9,6 +9,11 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+const (
+	killXMargin = 20
+	killYMargin = 20
+)
+
 type Game struct {
 	debug        bool
 	Screen       tcell.Screen
@@ -74,6 +79,10 @@ func (g *Game) Update() {
 	for _, ds := range g.layers {
 		for _, gobj := range ds {
 			gobj.Update()
+			pos := gobj.Pos()
+			if pos.X > g.MaxWidth+killXMargin || pos.Y > g.MaxHeight+killYMargin {
+				g.Destroy(gobj)
+			}
 		}
 	}
 }
