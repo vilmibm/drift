@@ -10,15 +10,24 @@ import (
 )
 
 type Game struct {
-	Repo         string
 	debug        bool
-	drawables    []Drawable
 	Screen       tcell.Screen
 	DefaultStyle tcell.Style
 	Style        tcell.Style
 	MaxWidth     int
 	MaxHeight    int
+	layers       map[int][]Drawable
 	// Logger       *log.Logger
+}
+
+func NewGame(screen tcell.Screen, style tcell.Style, maxWidth, maxHeight int) *Game {
+	return &Game{
+		Screen:    screen,
+		Style:     style,
+		MaxWidth:  maxWidth,
+		MaxHeight: maxHeight,
+		layers:    map[int][]Drawable{},
+	}
 }
 
 func (g *Game) DrawStr(x, y int, str string, style *tcell.Style) {
@@ -42,63 +51,84 @@ func (g *Game) DrawStr(x, y int, str string, style *tcell.Style) {
 }
 
 func (g *Game) AddDrawable(d Drawable) {
-	g.drawables = append(g.drawables, d)
+	l := d.GetLayer()
+	if _, ok := g.layers[l]; !ok {
+		g.layers[l] = []Drawable{}
+	}
+	g.layers[l] = append(g.layers[l], d)
 }
 
 func (g *Game) Destroy(d Drawable) {
+	ds := g.layers[d.GetLayer()]
 	newDrawables := []Drawable{}
-	for _, dd := range g.drawables {
+	for _, dd := range ds {
 		if dd == d {
 			continue
 		}
 		newDrawables = append(newDrawables, dd)
 	}
-	g.drawables = newDrawables
+	g.layers[d.GetLayer()] = newDrawables
 }
 
 func (g *Game) Update() {
-	for _, gobj := range g.drawables {
-		gobj.Update()
+	for _, ds := range g.layers {
+		for _, gobj := range ds {
+			gobj.Update()
+		}
 	}
 }
 
 func (g *Game) Draw() {
-	byLayer := map[int][]Drawable{}
-	layers := []int{}
-	// TODO layer implementation
-	for _, d := range g.drawables {
-		if _, ok := byLayer[d.GetLayer()]; !ok {
-			layers = append(layers, d.GetLayer())
-			byLayer[d.GetLayer()] = []Drawable{}
-		}
-		byLayer[d.GetLayer()] = append(byLayer[d.GetLayer()], d)
-
+	lix := []int{}
+	for k := range g.layers {
+		lix = append(lix, k)
 	}
-	sort.Ints(layers)
-	for _, l := range layers {
-		for _, d := range byLayer[l] {
+	sort.Ints(lix)
+	for _, l := range lix {
+		for _, d := range g.layers[l] {
 			d.Draw()
 		}
+
 	}
 }
 
-// TODO add a FindGameObject that is layer scoped
 func (g *Game) FindGameObject(fn func(Drawable) bool) Drawable {
-	for _, gobj := range g.drawables {
-		if fn(gobj) {
-			return gobj
+	for _, ds := range g.layers {
+		for _, d := range ds {
+			if fn(d) {
+				return d
+			}
 		}
 	}
+
 	return nil
 }
 
 func (g *Game) FilterGameObjects(fn func(Drawable) bool) []Drawable {
 	out := []Drawable{}
-	for _, gobj := range g.drawables {
-		if fn(gobj) {
-			out = append(out, gobj)
+	for _, ds := range g.layers {
+		for _, d := range ds {
+			if fn(d) {
+				out = append(out, d)
+			}
 		}
 	}
+	return out
+}
+
+func (g *Game) FilterGameObjectsByLayer(layer int, fn func(Drawable) bool) []Drawable {
+	out := []Drawable{}
+	ds, ok := g.layers[layer]
+	if !ok {
+		return out
+	}
+
+	for _, d := range ds {
+		if fn(d) {
+			out = append(out, d)
+		}
+	}
+
 	return out
 }
 

@@ -13,9 +13,12 @@ import (
 )
 
 const (
-	minHeight    = 10
-	minWidth     = 12
-	animInterval = time.Millisecond * 300
+	minHeight     = 10
+	minWidth      = 12
+	animInterval  = time.Millisecond * 300
+	farFlakeLayer = -1
+	windLayer     = 0
+	flakeLayer    = 1
 )
 
 type farFlake struct {
@@ -25,8 +28,8 @@ type farFlake struct {
 }
 
 func newFarFlake(g *game.Game, x int, char rune) *farFlake {
-	color := int32(rand.Intn(50) + 1)
-	speed := rand.Intn(3) + 1
+	color := int32(rand.Intn(30) + 1)
+	speed := rand.Intn(2) + 1
 	return &farFlake{
 		GameObject: game.GameObject{
 			Game:   g,
@@ -35,14 +38,12 @@ func newFarFlake(g *game.Game, x int, char rune) *farFlake {
 			W:      1,
 			H:      1,
 			Sprite: string(char),
-			Layer:  -1,
+			Layer:  farFlakeLayer,
 		},
 		speed: speed,
 		color: color,
 	}
 }
-
-// TODO farFlakes works. but they can be drawn in front of flakes. I want to experiment with a layer system for game objects that affects draw order.
 
 func (ff *farFlake) Update() {
 	ff.color += int32(rand.Intn(20) - 10) // -10 to 10
@@ -60,7 +61,7 @@ func (ff *farFlake) Update() {
 
 		return ff.X <= p.X && ff.X > p.X-s.X
 	}
-	winds := ff.Game.FilterGameObjects(windFilter)
+	winds := ff.Game.FilterGameObjectsByLayer(windLayer, windFilter)
 	if len(winds) > 0 {
 		w := winds[0]
 		ff.X += w.(*wind).Speed
@@ -74,6 +75,7 @@ type flake struct {
 	speed int
 	hp    int
 	color int32
+	swing int
 }
 
 func (f *flake) Update() {
@@ -90,9 +92,12 @@ func (f *flake) Update() {
 		p := d.Pos()
 		return p.Y == next && p.X == f.X
 	}
-	for len(f.Game.FilterGameObjects(flakeFilter)) > 0 && next > f.Y {
+	for len(f.Game.FilterGameObjectsByLayer(flakeLayer, flakeFilter)) > 0 && next > f.Y {
 		next--
 	}
+
+	oldY := f.Y
+	blown := false
 
 	f.Y = next
 	if f.Y > ground {
@@ -112,10 +117,11 @@ func (f *flake) Update() {
 		return f.X <= p.X && f.X > p.X-s.X
 	}
 
-	winds := f.Game.FilterGameObjects(windFilter)
+	winds := f.Game.FilterGameObjectsByLayer(windLayer, windFilter)
 	if len(winds) > 0 {
 		w := winds[0]
 		f.X += w.(*wind).Speed
+		blown = true
 	}
 
 	if f.Y == ground {
@@ -127,6 +133,11 @@ func (f *flake) Update() {
 		so := f.Game.Style.Foreground(tcell.NewRGBColor(f.color, f.color, f.color))
 		f.StyleOverride = &so
 	}
+
+	if oldY != f.Y && !blown {
+		// TODO f.X += f.swing
+		f.swing = -1 * f.swing
+	}
 }
 
 func newFlake(g *game.Game, x int, char rune) *flake {
@@ -137,6 +148,10 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 	//speed := rand.Intn(3) + 1
 	speed := 1
 	hpOffset := rand.Intn(25)
+	swing := -1
+	if rand.Intn(100) > 50 {
+		swing = 1
+	}
 	return &flake{
 		GameObject: game.GameObject{
 			Game:          g,
@@ -146,10 +161,12 @@ func newFlake(g *game.Game, x int, char rune) *flake {
 			H:             1,
 			Sprite:        string(char),
 			StyleOverride: &so,
+			Layer:         flakeLayer,
 		},
 		color: color,
 		speed: speed,
-		hp:    100 + hpOffset,
+		hp:    50 + hpOffset,
+		swing: swing,
 	}
 }
 
@@ -165,7 +182,7 @@ func (s *wind) Update() {
 
 func newWind(g *game.Game) *wind {
 	x := 0
-	y := rand.Intn(g.MaxHeight - 4)
+	y := rand.Intn(g.MaxHeight - 10)
 	width := rand.Intn(20) + 1
 	speed := rand.Intn(10) + 3
 	dir := 1 // TODO can spawn and go other way
@@ -177,6 +194,7 @@ func newWind(g *game.Game) *wind {
 			H:         1,
 			Game:      g,
 			Invisible: true,
+			Layer:     windLayer,
 		},
 		direction: dir,
 		Speed:     speed,
@@ -184,10 +202,6 @@ func newWind(g *game.Game) *wind {
 }
 
 func _main(lines []string) (err error) {
-	// IDEA z plane; only snow in foreground piles up; gives sense of depth (did
-	// 			it by accident with the color offset thing)
-	// TODO wind mechanic
-	// TODO gust mechanic
 	s, err := tcell.NewScreen()
 	if err != nil {
 		return err
@@ -211,12 +225,7 @@ func _main(lines []string) (err error) {
 		return errors.New("terminal is too small i'm sorry")
 	}
 
-	gg := &game.Game{
-		Screen:    s,
-		Style:     defStyle,
-		MaxWidth:  w,
-		MaxHeight: h,
-	}
+	gg := game.NewGame(s, defStyle, w, h)
 
 	rand.Seed(time.Now().Unix())
 
@@ -246,18 +255,24 @@ func _main(lines []string) (err error) {
 		if chance < 10 || starting {
 			rline := []rune(lines[lineIX])
 
-			x := 0
+			x := rand.Intn(5)
 			for ix := 0; ix < len(rline); ix++ {
 				gap := rand.Intn(gg.MaxWidth/len(rline)) + 1
 				if ix == 0 {
 					gap = rand.Intn(2)
 				}
-				if gap > 5 {
-					gap -= 5
-				}
+				// TODO
+				//if gap > 5 {
+				//	gap -= 5
+				//}
 				x += gap
 				gg.AddDrawable(newFlake(gg, x, rline[ix]))
-				gg.AddDrawable(newFarFlake(gg, x-2, rline[ix]))
+				offset := rand.Intn(4) + 1
+				if rand.Intn(10) > 5 {
+					offset = -1 * offset
+
+				}
+				gg.AddDrawable(newFarFlake(gg, x+offset, rline[ix]))
 			}
 
 			lineIX++
